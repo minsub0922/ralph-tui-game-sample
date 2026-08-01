@@ -53,3 +53,29 @@ src/core/difficulty.ts 에 slow / normal / fast 프리셋을 정의했다.
 메모: 난이도별 장애물 간 실제 간격은 slow 2.57초 / normal 1.30초 / fast 0.69초다. fast 는 체공 10 tick 에
 간격 17.1 tick 이라 사람에게 빡빡하지만 물리적으로는 여유가 있다. headless-sim 의 봇 임계 거리는
 속도에 비례시켜야 세 난이도가 모두 완주한다.
+- [✓] 2026-08-01 06:38 - 난이도 3단계 프리셋
+
+## headless-sim — 완료
+PRODUCT.md 의 Observable outcome 을 실행 가능하게 만들었다.
+- src/sim/bot.ts: jumpThreshold(track, leadTicks=3) = dinoX + dinoWidth + leadTicks x obstacleSpeed,
+  chooseInput(state, threshold) — 지면에 있고, 아직 지나가지 않은(x + obstacleWidth > dinoX) 가장 가까운
+  장애물이 threshold 안이면 Jump. 임계 거리를 속도에 비례시켜야 세 난이도가 모두 통과한다.
+  안전 구간 계산: 점프 체공 10 tick 중 장애물 높이(2) 위에 있는 것은 2~8 tick 째다. 뛰는 순간의 장애물
+  x 가 [dinoX+dinoWidth+s, dinoX-obstacleWidth+9s] 안이면 통과 — leadTicks 3 은 세 난이도 모두 그 안이다.
+- src/sim/run.ts: runGame(options) 루프, formatResult 한 줄, parseArgs(--difficulty/--seed/--ticks/--threshold,
+  `--flag value` 와 `--flag=value` 둘 다), main(argv) -> { lines, exitCode }. main 은 순수 함수라 테스트가
+  stdout 을 가로챌 필요가 없고, 파일 끝의 import.meta.main 블록에서만 stdout 쓰기와 exit code 를 한다.
+  DEFAULT_SEED 1337 / DEFAULT_TICKS 2000.
+- package.json 에 "sim": "node src/sim/run.ts" 추가.
+- npm run sim → 3줄 출력 + exit 0. --threshold 0 → 세 판 모두 collision + exit 1.
+  같은 시드 두 번 실행 결과를 cmp 로 비교해 문자 단위 동일 확인.
+- tests/sim/run.test.ts (9), tests/sim/bot.test.ts (7) 추가 — npm run check 통과 (51 pass / 0 fail).
+  run.test.ts 는 src/sim/*.ts 의 import 문을 읽어 /ui/ 와 /store/ 를 참조하지 않는지도 검사한다.
+  봇이 특정 시드에만 맞춰진 것이 아님을 확인하려고 세 난이도 x 시드 7종을 5000 tick 씩 돌린다.
+- 속도 비례 제거 / 체공 가드 제거 / 지나간 장애물 필터 제거 / 생존 판정 무력화 4가지로 코드를 일부러
+  깨뜨려 테스트가 각각 잡아내는지 확인한 뒤 되돌렸다.
+
+메모: createGame 에 넘기는 시드를 상수로 바꾸는 변형은 테스트가 잡지 못한다. 봇의 결과가 장애물 간격에
+전혀 의존하지 않기 때문이다(어떤 간격도 minGap > 점프 주기라 판단이 같다). 시드 -> 배치 결정론은
+tests/core/obstacles.test.ts 가 이미 검증하고 있어 sim 쪽에는 억지 테스트를 만들지 않았다.
+장애물 개수 같은 필드를 RunResult 에 넣으면 잡히지만, 출력 줄에 쓰이지 않는 필드가 생겨서 두지 않았다.

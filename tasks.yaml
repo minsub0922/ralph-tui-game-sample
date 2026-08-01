@@ -86,7 +86,7 @@ tasks:
     type: core
     depends_on:
       - difficulty-presets
-    completed: false
+    completed: true
     description: |
       목표:
         PRODUCT.md 의 Observable outcome 을 실제로 실행 가능하게 만든다.
