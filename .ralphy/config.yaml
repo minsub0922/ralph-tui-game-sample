@@ -1,0 +1,58 @@
+project:
+  name: tui-dino-game
+  language: TypeScript
+  framework: Node.js 내장 모듈만 사용 (런타임 의존성 0개, devDependency 는 typescript 하나)
+  description: 터미널에서 스페이스 한 키로 즐기는 공룡 점프 게임. 사내 해커톤 부스의 심사자가 설치·설명·학습 없이 30초 안에 직접
+    조작해 볼 수 있는 것이 목표다. 시작 시 slow / normal / fast 난이도를 고르고, 이후 조작은 스페이스 1키로 고정된다.
+    성공 여부는 사람의 눈이 아니라 헤드리스 시뮬레이션(`npm run sim`)이 판정한다 — 고정 시드로 난이도 3종을 완주하면 exit
+    0. 순수 게임 로직(src/core)과 I/O(src/ui/terminal.ts, src/store)를 엄격히 분리하고, 같은 시드 +
+    같은 입력은 항상 같은 결과를 내는 결정론을 유지한다. 자세한 정의는 PRODUCT.md, 작업 순서는 tasks.yaml, 작업 방식은
+    AGENTS.md 를 따른다.
+commands:
+  test: npm run check
+  lint: ""
+  build: npm run typecheck
+rules:
+  - 코딩 전에 PRODUCT.md, AGENTS.md, tasks.yaml 을 읽고 이번 task 의 목표와 acceptance
+    criteria 를 그대로 옮겨 적은 뒤 시작한다
+  - tasks.yaml 에서 completed=false 이고 depends_on 이 모두 완료된 가장 위의 task 하나만 수행한다. 다음
+    task 의 코드를 "어차피 필요하니까" 미리 작성하지 않는다
+  - 런타임 의존성은 0개다. npm install 을 실행하지 않는다. 색상, 박스 그리기, 키 파싱, 인자 파싱, PRNG 는 모두 직접
+    구현한다. 패키지가 꼭 필요하다고 판단되면 설치하지 말고 이유와 대안을 사람에게 물어본다
+  - 테스트는 node:test 와 node:assert 로만 작성하고, tests/ 아래 src 와 같은 디렉터리 구조(core / sim
+    / ui / store)를 유지한다
+  - 레이어 규칙을 지킨다 — src/core 는 process / node:fs / node:os 를 참조하지 않고, src/sim 은
+    src/core 만 import 하며, src/ui/render.ts 와 src/ui/keys.ts 는 순수 함수이고, stdout
+    쓰기는 src/ui/terminal.ts 한 곳에만, 파일시스템 접근은 src/store 안에서만 한다
+  - 결정론을 깨지 않는다. src/core 와 src/sim 에서 Math.random(), Date.now(), new Date() 를
+    쓰지 않는다. 난수는 시드된 rng 로만 얻고, 시간이 필요하면 tick 수를 쓴다
+  - step() 은 기존 state 를 변형하지 않고 새 state 를 반환한다. 같은 시드 + 같은 입력 시퀀스는 항상 같은 최종
+    state 와 점수를 낸다
+  - 물리적으로 회피 불가능한 장애물 배치를 만들지 않는다. 모든 난이도에서 "최대 점프 체공 거리 > 장애물 폭" 과 minGap 불변식이
+    성립해야 한다
+  - 터미널 입력, 작은 터미널 크기(최소 60x16), 화면 밖 좌표, 긴 텍스트, 빈 상태를 크래시나 레이아웃 깨짐 없이 처리한다. 렌더
+    결과는 항상 viewport 크기에 맞춰 자른다
+  - 정상 종료 / Q / Ctrl+C / 예외 모든 경로에서 raw mode 와 커서 상태를 원래대로 복구한다
+  - 활성 TUI 화면 위에 디버그 로그나 비구조적 출력을 쓰지 않는다
+  - 타이밍에 의존하는 sleep 이나 단언 없이 렌더링·키 입력·상태 전이를 테스트한다. setInterval 이 필요한 코드는 순수 함수로
+    분리해 테스트한다
+  - task 완료를 보고하기 전에 반드시 해당 task 의 "검증 명령"(최소 npm run check, 해당되면 npm run sim
+    까지)을 실제로 실행하고 통과를 확인한다
+  - 테스트를 통과시키려고 삭제·skip·주석 처리하거나 단언을 느슨하게 바꾸지 않는다. 테스트가 깨지면 코드를 고친다. 테스트가 정말
+    잘못됐다고 판단되면 근거와 함께 사람에게 보고한다
+  - 현재 task 와 무관한 리팩터링, 무관한 화면 수정, 무관한 테스트 수정을 하지 않는다
+  - 같은 오류를 두 번 이상 같은 방식으로 고치려 하지 않는다. 30분 넘게 막히면 시도한 것과 막힌 지점을 정리해 사람에게 보고한다.
+    범위를 임의로 줄이거나 acceptance criteria 를 낮춰서 "완료" 처리하지 않는다
+  - "task 하나당 커밋 하나. 메시지는 `feat(<task-id>): <한 줄 요약>` 형식으로 쓴다"
+  - tasks.yaml 은 completed 값만 false -> true 로 바꾼다. task 를 추가·삭제·재정렬하거나
+    acceptance criteria 를 수정하지 않는다
+  - Complete exactly one task per iteration and create exactly one descriptive
+    Git commit containing the task implementation, tests, tasks.yaml update, and
+    .ralphy/progress.txt update before reporting completion
+boundaries:
+  never_touch:
+    - PRODUCT.md
+    - AGENTS.md
+    - .git/
+    - tasks.yaml 의 task 내용 (completed 값만 변경 가능)
+    - 다른 task 가 만든 기존 테스트

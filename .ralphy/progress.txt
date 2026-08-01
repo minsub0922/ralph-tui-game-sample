@@ -1,0 +1,14 @@
+# Ralphy Progress Log
+
+## core-loop-and-jump — 완료
+프로젝트 부트스트랩(package.json / tsconfig.json / .gitignore)과 순수 게임 코어를 만들었다.
+- src/core/types.ts: GameStatus, Input(const object — erasableSyntaxOnly), GameConfig, Dino, GameState
+- src/core/rng.ts: mulberry32 기반 불변 PRNG. next(rng) -> { rng, value }
+- src/core/game.ts: createGame(config, seed), step(state, input). 지면에 있을 때만 점프가 걸려 더블 점프가 없고,
+  y <= groundY 이면 정확히 groundY 로 클램프한다. step 은 항상 새 state 를 반환한다.
+- tests/core/game.test.ts (10), tests/core/rng.test.ts (6) — npm run check 통과 (16 pass / 0 fail).
+- 이중 점프 가드를 일부러 깨뜨려 테스트가 실제로 잡아내는지 확인한 뒤 되돌렸다.
+
+메모: 타입 체크를 위해 devDependency 에 @types/node 를 추가했다(typescript 외 1개). 타입 선언 전용이라
+런타임 의존성은 여전히 0개다. 원치 않으면 node 내장 모듈용 .d.ts 를 직접 작성하는 대안이 있다.
+런타임은 Node 22 의 네이티브 타입 스트리핑을 쓴다 — 빌드 단계 없이 node --test 로 .ts 를 그대로 실행한다.
