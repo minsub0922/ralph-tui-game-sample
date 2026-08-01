@@ -213,7 +213,7 @@ tasks:
     type: stretch
     depends_on:
       - progressive-speed-ramp
-    completed: false
+    completed: true
     description: |
       목표:
         한 판의 시드와 입력 시퀀스를 기록해 두었다가 그대로 재생해 같은 결과가 나오는지 확인한다.
