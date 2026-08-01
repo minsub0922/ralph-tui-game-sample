@@ -182,3 +182,35 @@ R 재시작은 index.ts 의 setInterval 루프 안이라 단위 테스트로 잡
 BEST 00010 / * NEW RECORD * -> r -> SCORE 00001 부터 다시 시작하고 난이도 NORMAL 과 HI 00010 유지 ->
 2판 동점이라 NEW RECORD 없음 -> q 로 exit 0. 실행 후 실제 ~/.tui-dino 는 생기지 않았다.
 - [✓] 2026-08-01 - 게임 오버 처리, R 재시작, 난이도별 최고 기록 저장
+- [✓] 2026-08-01 07:12 - 게임 오버 처리, R 재시작, 난이도별 최고 기록 저장
+
+## progressive-speed-ramp — 완료
+- TrackConfig 에 speedRampPerTick / maxSpeedMultiplier 를 선택 필드로 추가했다. obstacleSpeed 옆에
+  두는 게 맞다고 봤다 — 배율이 곱해지는 대상이 바로 그 값이고, minGap 불변식도 트랙 안에서 닫힌다.
+  둘 다 생략 가능하므로 램프를 모르는 기존 config(테스트 픽스처 포함)는 배율 1 로 그대로 돈다.
+- game.ts 에 speedMultiplier(track, tick) = min(1 + ramp * tick, cap), effectiveSpeed = 속도 x 배율.
+  tick 만 보는 순수 함수라 결정론이 유지된다 (시간을 읽지 않는다). advance() 는 이제 speed 를 인자로
+  받는다 — 한 tick 안에서는 모든 장애물이 같은 거리를 움직이므로 이미 생긴 간격은 변하지 않고,
+  minGap 불변식이 공간적으로 그대로 성립한다. step 은 state.tick(그 tick 시작 시점) 의 속도를 쓴다.
+- 프리셋: 시작 속도(0.7 / 1 / 1.4)는 손대지 않고 ramp 0.0002/tick 을 세 난이도가 공유한다.
+  상한만 다르다 — slow 1.5 / normal 1.4 / fast 1.2. 상한은 취향이 아니라 간격 여유가 정했다:
+  착지 후 다시 뛰기까지 필요한 거리는 (체공 10 + 착지 1) x 속도 + 위험 구간 4 이고, 이게 minGap 을
+  넘으면 회피 불가 배치가 된다. 한계 배율은 slow 3.37 / normal 2.0 / fast 1.30 이라 fast 가 가장 낮다.
+  상한 도달 시점은 fast 1000 tick, normal 2000, slow 2500.
+- 봇: jumpThresholdAt(state) 를 추가해 매 tick 의 실효 속도로 임계 거리를 다시 잡는다.
+  기존 jumpThreshold(track) 는 그대로 두고(tick 0 값과 동일) run.ts 가 --threshold 를 주지 않았을 때만
+  tick 마다 계산한다. --threshold 0 으로 죽는 경로는 예전과 같다.
+- tests/core/speed-ramp.test.ts (8) + tests/sim/speed-ramp.test.ts (6) 추가.
+  npm run check 125 pass / 0 fail, npm run sim exit 0 (기존 테스트는 한 줄도 고치지 않았다).
+- 6가지 변형으로 새 테스트가 실제로 잡는지 확인하고 되돌렸다: 상한 제거(5 fail), 램프 미적용(3 fail),
+  jumpThresholdAt 속도 비례 제거(1 fail), fast 상한 1.5(1 fail) / 3.0(3 fail) 전부 CAUGHT.
+  다만 run.ts 에서 임계 거리를 tick 0 값으로 고정하는 변형은 잡히지 않는다 — 지금 상한(fast 1.2)에서는
+  고정 임계 거리로도 점프 창 안에 들어오기 때문이다. 속도 비례는 여유를 넓히는 쪽이지 유일한 생존
+  조건은 아니다. 대신 상한 배속에서 점프 창이 유효한지를 궤적으로 직접 검사하는 테스트를 넣었다.
+- 별도 확인: 세 난이도 x 시드 60개 x 20000 tick 완주 (실패 0). 2000 tick 완주 점수는 램프 이전과
+  같다 — 점수는 tick 기반이라 속도와 무관하다.
+
+메모: 배율을 tick 이 아니라 "지나간 장애물 수"로 붙이는 안도 생각했지만, 그러면 rng 로 정해지는
+간격 때문에 같은 tick 에서 난이도별 체감이 갈리고 상한 도달 시점을 계산으로 고정할 수 없다.
+tick 기반이 리플레이(다음 task) 에서도 검증하기 쉽다.
+- [✓] 2026-08-01 - (stretch) 판이 진행될수록 속도 상승

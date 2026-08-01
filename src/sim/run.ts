@@ -1,6 +1,6 @@
 import { DIFFICULTY_IDS, getConfig, type DifficultyId } from '../core/difficulty.ts';
 import { createGame, step } from '../core/game.ts';
-import { chooseInput, jumpThreshold } from './bot.ts';
+import { chooseInput, jumpThresholdAt } from './bot.ts';
 
 /** 인자 없이 돌릴 때 쓰는 고정 시드. 결과를 재현하려면 이 값이 바뀌면 안 된다. */
 export const DEFAULT_SEED = 1337;
@@ -12,7 +12,7 @@ export type RunOptions = {
   difficulty: DifficultyId;
   seed: number;
   ticks: number;
-  /** 봇이 점프를 시작하는 거리. 생략하면 난이도 속도에 맞춰 계산한다. */
+  /** 봇이 점프를 시작하는 거리. 생략하면 매 tick 의 실효 속도에 맞춰 계산한다. */
   threshold?: number;
 };
 
@@ -32,11 +32,11 @@ export type RunResult = {
 /** 봇에게 한 판을 맡겨 목표 tick 까지 돌린다. 같은 인자는 항상 같은 결과를 낸다. */
 export function runGame(options: RunOptions): RunResult {
   const config = getConfig(options.difficulty);
-  const threshold = options.threshold ?? jumpThreshold(config.track);
 
   let state = createGame(config, options.seed);
   while (state.tick < options.ticks && state.status === 'running') {
-    state = step(state, chooseInput(state, threshold));
+    // 임계 거리를 고정하지 않으면 매 tick 의 실효 속도에 맞춰 다시 계산한다.
+    state = step(state, chooseInput(state, options.threshold ?? jumpThresholdAt(state)));
   }
 
   const survived = state.status === 'running';

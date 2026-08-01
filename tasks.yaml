@@ -193,7 +193,7 @@ tasks:
     type: stretch
     depends_on:
       - gameover-restart-and-highscore
-    completed: false
+    completed: true
     description: |
       목표:
         한 판 안에서 시간이 지날수록 장애물 속도가 서서히 올라가게 한다.

@@ -23,6 +23,22 @@ export function createGame(config: GameConfig, seed: number): GameState {
 }
 
 /**
+ * 그 tick 의 장애물 속도 배율. 1 에서 시작해 maxSpeedMultiplier 까지만 오른다.
+ *
+ * tick 만으로 정해지는 순수 함수라 같은 시드 + 같은 입력은 여전히 같은 결과를 낸다.
+ */
+export function speedMultiplier(track: TrackConfig, tick: number): number {
+  const ramp = track.speedRampPerTick ?? 0;
+  const cap = track.maxSpeedMultiplier ?? 1;
+  return Math.min(1 + ramp * Math.max(tick, 0), Math.max(cap, 1));
+}
+
+/** 그 tick 에 장애물이 실제로 움직이는 거리. */
+export function effectiveSpeed(track: TrackConfig, tick: number): number {
+  return track.obstacleSpeed * speedMultiplier(track, tick);
+}
+
+/**
  * 한 tick 진행한 새 상태를 반환한다. 인자로 받은 state 는 변형하지 않는다.
  *
  * 이미 끝난 판은 더 이상 움직이지 않는다 — 같은 state 를 그대로 돌려주므로
@@ -40,7 +56,8 @@ export function step(state: GameState, input: Input): GameState {
     return { ...state, tick, score: scoreAt(config, tick), dino };
   }
 
-  const spawned = spawn(track, advance(track, state.obstacles), state.rng, state.nextGap);
+  const moved = advance(track, state.obstacles, effectiveSpeed(track, state.tick));
+  const spawned = spawn(track, moved, state.rng, state.nextGap);
 
   return {
     ...state,
@@ -77,10 +94,15 @@ function scoreAt(config: GameConfig, tick: number): number {
   return Math.floor(tick / (config.ticksPerPoint ?? 1));
 }
 
-/** 장애물을 왼쪽으로 밀고, 화면 왼쪽 밖으로 완전히 빠져나간 것은 버린다. */
-function advance(track: TrackConfig, obstacles: readonly Obstacle[]): Obstacle[] {
+/**
+ * 장애물을 왼쪽으로 밀고, 화면 왼쪽 밖으로 완전히 빠져나간 것은 버린다.
+ *
+ * 한 tick 안에서는 모든 장애물이 같은 거리를 움직이므로, 속도가 올라가도
+ * 이미 생성된 장애물 사이의 간격은 그대로다.
+ */
+function advance(track: TrackConfig, obstacles: readonly Obstacle[], speed: number): Obstacle[] {
   return obstacles
-    .map((obstacle) => ({ x: obstacle.x - track.obstacleSpeed }))
+    .map((obstacle) => ({ x: obstacle.x - speed }))
     .filter((obstacle) => obstacle.x + track.obstacleWidth > 0);
 }
 

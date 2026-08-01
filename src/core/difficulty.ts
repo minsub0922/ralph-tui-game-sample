@@ -17,8 +17,19 @@ export type DifficultyConfig = GameConfig & {
   track: TrackConfig;
 };
 
+/**
+ * 판이 길어질수록 붙는 tick 당 배율. 세 난이도가 같은 기울기를 쓴다 —
+ * 상한에 도달하는 시점만 난이도마다 달라진다 (fast 는 1000 tick, slow 는 2500 tick).
+ */
+const SPEED_RAMP_PER_TICK = 0.0002;
+
 /** 트랙 규격은 난이도와 무관하게 고정이고, 속도와 간격만 달라진다. */
-function track(obstacleSpeed: number, minGap: number, maxGap: number): TrackConfig {
+function track(
+  obstacleSpeed: number,
+  minGap: number,
+  maxGap: number,
+  maxSpeedMultiplier: number,
+): TrackConfig {
   return {
     dinoX: 6,
     dinoWidth: 2,
@@ -27,6 +38,8 @@ function track(obstacleSpeed: number, minGap: number, maxGap: number): TrackConf
     obstacleWidth: 2,
     obstacleHeight: 2,
     obstacleSpeed,
+    speedRampPerTick: SPEED_RAMP_PER_TICK,
+    maxSpeedMultiplier,
     minGap,
     maxGap,
   };
@@ -39,6 +52,10 @@ function track(obstacleSpeed: number, minGap: number, maxGap: number): TrackConf
  *
  * 난이도는 장애물 속도, 간격, tickMs 로만 올라간다. 조작 감각이 바뀌지 않아야
  * 스페이스 하나를 배운 심사자가 세 난이도를 그대로 오갈 수 있다.
+ *
+ * 시작 속도는 그대로 두고 판이 진행될수록 배율이 붙는다. 상한은 간격 여유가 정한다 —
+ * 착지 후 다시 뛰기까지 필요한 거리 (11 tick x 속도 + 위험 구간 4) 가 minGap 을
+ * 넘지 않는 선까지만 올린다. 그래서 간격이 좁은 fast 의 상한이 가장 낮다.
  */
 const PRESETS: Record<DifficultyId, DifficultyConfig> = {
   slow: {
@@ -47,7 +64,7 @@ const PRESETS: Record<DifficultyId, DifficultyConfig> = {
     jumpVelocity: 1.6,
     gravity: 0.35,
     ticksPerPoint: 6,
-    track: track(0.7, 30, 46),
+    track: track(0.7, 30, 46, 1.5),
   },
   normal: {
     tickMs: 50,
@@ -55,7 +72,7 @@ const PRESETS: Record<DifficultyId, DifficultyConfig> = {
     jumpVelocity: 1.6,
     gravity: 0.35,
     ticksPerPoint: 5,
-    track: track(1, 26, 40),
+    track: track(1, 26, 40, 1.4),
   },
   fast: {
     tickMs: 40,
@@ -63,7 +80,7 @@ const PRESETS: Record<DifficultyId, DifficultyConfig> = {
     jumpVelocity: 1.6,
     gravity: 0.35,
     ticksPerPoint: 4,
-    track: track(1.4, 24, 34),
+    track: track(1.4, 24, 34, 1.2),
   },
 };
 

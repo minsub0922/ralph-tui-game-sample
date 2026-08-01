@@ -1,3 +1,4 @@
+import { effectiveSpeed } from '../core/game.ts';
 import { Input, type GameState, type TrackConfig } from '../core/types.ts';
 
 /**
@@ -17,6 +18,17 @@ export const LEAD_TICKS = 3;
  */
 export function jumpThreshold(track: TrackConfig, leadTicks: number = LEAD_TICKS): number {
   return track.dinoX + track.dinoWidth + leadTicks * track.obstacleSpeed;
+}
+
+/**
+ * 지금 state 에서의 임계 거리. 판이 진행돼 속도가 올라가면 그만큼 더 일찍 뛴다.
+ *
+ * 속도 배율이 붙지 않는 트랙에서는 jumpThreshold(track) 와 같은 값이다.
+ */
+export function jumpThresholdAt(state: GameState, leadTicks: number = LEAD_TICKS): number {
+  const track = state.config.track;
+  if (track === undefined) return 0;
+  return track.dinoX + track.dinoWidth + leadTicks * effectiveSpeed(track, state.tick);
 }
 
 /**

@@ -27,8 +27,21 @@ export type TrackConfig = {
   /** 장애물 히트박스. 세로는 항상 groundY 에서 시작한다. */
   obstacleWidth: number;
   obstacleHeight: number;
-  /** 장애물이 매 tick 왼쪽으로 이동하는 거리. */
+  /** 장애물이 매 tick 왼쪽으로 이동하는 거리. 판이 시작될 때의 값이다. */
   obstacleSpeed: number;
+  /**
+   * tick 당 속도 배율 증가량. 생략하면 0 — 한 판 내내 속도가 그대로다.
+   *
+   * 배율은 tick 에서만 계산하므로 시간을 읽지 않고도 결정론이 유지된다.
+   */
+  speedRampPerTick?: number;
+  /**
+   * 속도 배율의 상한. 생략하면 1.
+   *
+   * 상한이 있어야 minGap 이 회피 가능 최소 간격보다 크다는 불변식을
+   * 판이 아무리 길어져도 유지할 수 있다.
+   */
+  maxSpeedMultiplier?: number;
   /** 앞뒤 장애물의 x 간격 범위. 실제 간격은 이 사이에서 rng 로 정해진다. */
   minGap: number;
   maxGap: number;
