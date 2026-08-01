@@ -12,6 +12,7 @@ export type KeyBytes = Uint8Array | readonly number[] | string;
 export const Key = {
   Jump: 'jump',
   Quit: 'quit',
+  Retry: 'retry',
   Up: 'up',
   Down: 'down',
   Enter: 'enter',
@@ -38,6 +39,9 @@ function keyOf(code: number): Key | null {
     case 0x71:
     case 0x51:
       return Key.Quit;
+    case 0x72:
+    case 0x52:
+      return Key.Retry;
     case 0x0d:
     case 0x0a:
       return Key.Enter;

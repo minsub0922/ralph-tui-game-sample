@@ -142,3 +142,43 @@ src/ui/terminal.ts, src/index.ts) 와 package.json 의 "start" 스크립트.
 SIGINT / SIGTERM 핸들러는 raw mode 진입 전이나 TTY 가 아닐 때를 위한 보험이다(그 경로는 exit 130).
 터미널 크기는 시작 시 한 번만 재고 유지한다 — 실행 중 리사이즈 대응은 PRODUCT.md 의 non-goal 이다.
 - [✓] 2026-08-01 - 터미널 실행 (난이도 메뉴 + 게임 루프 + 안전한 종료)
+- [✓] 2026-08-01 07:05 - 터미널 실행 (난이도 메뉴 + 게임 루프 + 안전한 종료)
+
+## gameover-restart-and-highscore — 완료
+한 판이 끝난 뒤의 흐름을 완성했다. 새 파일 2개(src/core/score.ts, src/store/highscore.ts)와
+src/ui/keys.ts, src/index.ts 수정.
+- score.ts (순수): HighScores = Readonly<Partial<Record<DifficultyId, number>>>, NO_HIGH_SCORES,
+  highScoreOf(scores, id), mergeHighScores(current, id, score) -> { scores, isNewRecord },
+  parseHighScores(unknown) -> HighScores.
+  기존 기록을 "넘어설 때만" 갱신한다 — 동점은 신기록이 아니다. 갱신되지 않으면 받은 기록 객체를
+  그대로 돌려주고, 갱신될 때는 { ...current } 위에 해당 난이도만 얹으므로 다른 난이도가 흔들리지 않는다.
+  points() 하나로 숫자/유한/양수/정수 검증을 모아 두고 병합과 파싱이 같은 규칙을 쓴다.
+  parseHighScores 를 core 에 둔 이유: 파일에서 온 값을 믿을 수 없다는 건 순수 로직이고, store 는
+  fs 와 JSON.parse 만 하게 남겨야 레이어가 얇아진다.
+- highscore.ts (store, 유일한 파일시스템 지점): defaultScoresPath() = ~/.tui-dino/scores.json,
+  loadHighScores(path?) — 파일 없음 / 깨진 JSON / 배열 / 타입 안 맞는 값 / 디렉터리 전부 빈 기록으로 떨어진다.
+  saveHighScores(scores, path?) — mkdir -p 후 path + '.tmp' 에 쓰고 renameSync 로 갈아 끼운다.
+  rename 은 원자적이라 쓰는 도중 죽어도 기존 파일이 깨지지 않는다. 실패하면 임시 파일을 치우고 false 를
+  돌려준다 — 기록 저장 실패가 게임을 멈출 이유는 없다.
+- keys.ts: Key.Retry 추가 (0x72 'r' / 0x52 'R'). 기존 키 매핑과 테스트는 그대로다.
+- index.ts: playGame -> playRound(terminal, difficulty, scores) -> { outcome: 'retry'|'quit', scores }.
+  게임 오버가 나는 tick 에 mergeHighScores + saveHighScores 를 하고, 그 결과로 패널을 그리므로
+  BEST 와 * NEW RECORD * 가 그 자리에서 보인다. HUD 의 HI 도 현재 난이도의 기록을 쓴다.
+  R 은 status === 'gameOver' 일 때만 듣는다 — 달리는 중에 눌러도 판이 날아가지 않는다.
+  main 은 난이도를 한 번만 고르고 while (outcome === 'retry') 로 같은 난이도의 판을 다시 연다.
+  메뉴로 돌아가지 않고, 기록은 판 사이에서 이어진다.
+- tests/core/score.test.ts (11), tests/store/highscore.test.ts (11) 추가 —
+  npm run check 통과 (110 pass / 0 fail), npm run sim exit 0.
+  store 테스트는 mkdtemp 로 만든 임시 디렉터리에서만 돌고 after() 에서 지운다. 실제 홈은 건드리지 않는다
+  (defaultScoresPath 는 경로 문자열만 비교한다).
+- 5가지로 코드를 일부러 깨뜨려 테스트가 각각 잡아내는지 확인한 뒤 되돌렸다: 동점을 신기록으로 인정,
+  병합 시 다른 난이도 폐기, 파일 값 무검증, 임시 파일 없이 직접 쓰기, 읽은 값 무검증 — 전부 CAUGHT.
+
+메모: "임시 파일 + rename" 을 테스트로 고정하는 방법이 마땅치 않아, 기존 기록 파일을 chmod 0444 로
+읽기 전용으로 만든 뒤 저장이 성공하는지 본다. 직접 쓰기는 EACCES 로 실패하고 rename 은 디렉터리
+쓰기 권한만 필요해 성공한다 — 전략을 바꾸면 바로 깨지는 테스트다.
+R 재시작은 index.ts 의 setInterval 루프 안이라 단위 테스트로 잡지 않고, 임시 HOME 을 준 자식
+프로세스에 키를 파이프로 넣어 확인했다: 1판 게임오버 -> scores.json 에 {"normal":10} 저장 + 패널에
+BEST 00010 / * NEW RECORD * -> r -> SCORE 00001 부터 다시 시작하고 난이도 NORMAL 과 HI 00010 유지 ->
+2판 동점이라 NEW RECORD 없음 -> q 로 exit 0. 실행 후 실제 ~/.tui-dino 는 생기지 않았다.
+- [✓] 2026-08-01 - 게임 오버 처리, R 재시작, 난이도별 최고 기록 저장

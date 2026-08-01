@@ -165,7 +165,7 @@ tasks:
     type: core
     depends_on:
       - terminal-app
-    completed: false
+    completed: true
     description: |
       목표:
         한 판이 끝난 뒤의 흐름을 완성한다.
