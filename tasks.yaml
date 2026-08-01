@@ -112,7 +112,7 @@ tasks:
     type: core
     depends_on:
       - headless-sim
-    completed: false
+    completed: true
     description: >
       목표:
         src/ui/render.ts 에 renderFrame(state, viewport) -> string[] 순수 함수를 만든다.

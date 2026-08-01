@@ -79,3 +79,31 @@ PRODUCT.md 의 Observable outcome 을 실행 가능하게 만들었다.
 전혀 의존하지 않기 때문이다(어떤 간격도 minGap > 점프 주기라 판단이 같다). 시드 -> 배치 결정론은
 tests/core/obstacles.test.ts 가 이미 검증하고 있어 sim 쪽에는 억지 테스트를 만들지 않았다.
 장애물 개수 같은 필드를 RunResult 에 넣으면 잡히지만, 출력 줄에 쓰이지 않는 필드가 생겨서 두지 않았다.
+- [✓] 2026-08-01 06:45 - 헤드리스 시뮬레이션 (관찰 가능한 결과)
+
+## pure-renderer — 완료
+src/ui/render.ts 에 renderFrame(state, viewport) -> string[] 순수 함수를 만들었다.
+- 타입: Viewport { width, height }, RenderState { game, difficulty, highScore, isNewRecord }.
+  최고 기록과 신기록 여부는 코어 상태가 아니라 저장소(다음 task)에서 오므로 GameState 와 분리해 따로 받는다.
+  덕분에 render.ts 는 파일시스템을 몰라도 HUD 와 게임 오버 패널을 그린다.
+- 화면 구성: 0행 HUD(` NORMAL  SCORE 00000  HI 00128`, 자릿수 고정 5자리라 매 tick 폭이 흔들리지 않는다),
+  1행~height-2행 본문, height-1행 지면('=' 반복). 공룡의 발은 지면 바로 윗줄(height-2)에 선다.
+- 좌표 변환: 세계는 위로 갈수록 y 가 커지고 화면은 위로 갈수록 행이 작아지므로 row = groundRow - round(y - groundY).
+  열은 round(obstacle.x). 스프라이트는 히트박스와 같은 크기다 — 공룡 2x3 ['-@','##','/\'], 선인장 2x2 ['\|',' |'].
+- 잘림: 문자 단위 grid 에 쓰고 setCell 이 화면 밖 좌표를 조용히 버린다. 그래서 x=-1000 이든 x=1000 이든
+  예외 없이 부분 렌더되고, 반환은 언제나 height 줄 x width 글자다(0x0, 1x1 같은 퇴화한 크기 포함).
+  스프라이트는 0행(HUD)을 덮지 않도록 BODY_TOP_ROW 아래만 그린다.
+- gameOver: 가운데 정렬 ASCII 박스를 화면 중앙에 덮어 그린다 (GAME OVER / SCORE / BEST / * NEW RECORD * /
+  R = RETRY   Q = QUIT). 신기록이 아니면 그 줄만 비워 박스 크기가 바뀌지 않는다.
+- tests/ui/render.test.ts (11) 추가 — npm run check 통과 (62 pass / 0 fail).
+  20x8 전체 프레임 스냅샷으로 행/열 배치를 고정하고, 최소 크기(60x16)에서 실제 fast 프리셋을 300 tick
+  돌리며 매 프레임 줄 수/길이를 검사한다. render.ts 소스에 process 와 node: 모듈이 없는지도 검사한다.
+- 열 클리핑 제거 / 공룡 y 무시 / 지면 줄 제거 / R,Q 안내 제거 / 스프라이트 상하 반전 5가지로 코드를
+  일부러 깨뜨려 테스트가 각각 잡아내는지 확인한 뒤 되돌렸다.
+
+메모: renderFrame 의 첫 인자를 GameState 가 아니라 RenderState 로 뒀다. HUD 가 요구하는 난이도와 최고
+점수가 GameState 에 없기 때문이다. viewport 에 끼워 넣는 방법도 있었지만 viewport 는 화면 크기라는
+뜻만 갖게 두는 편이 terminal-app 에서 크기 검사와 재사용하기 좋다.
+공룡이 track?.dinoX 를 쓰되 track 이 없으면 6 에 세운다 — track 은 GameConfig 에서 선택 항목이고
+tests/core/game.test.ts 가 실제로 그 경우를 쓴다.
+- [✓] 2026-08-01 - 순수 렌더러 (state -> 화면 문자열)
