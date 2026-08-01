@@ -62,7 +62,7 @@ tasks:
     type: core
     depends_on:
       - obstacles-and-scoring
-    completed: false
+    completed: true
     description: |
       목표:
         src/core/difficulty.ts 에 slow / normal / fast 세 가지 GameConfig 프리셋을 정의한다.

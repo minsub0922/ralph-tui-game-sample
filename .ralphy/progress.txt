@@ -30,3 +30,26 @@ tests/core/game.test.ts 의 CONFIG 가 타입 에러가 나고 "상태는 항상
 기존 테스트 수정은 금지 영역이라 "트랙이 없으면 장애물이 없는 물리 전용 게임" 으로 정의했다.
 difficulty-presets 의 세 프리셋은 track 을 모두 채워서 만들면 된다.
 - [✓] 2026-08-01 15:40 - 장애물 생성, 충돌 판정, 점수 누적
+- [✓] 2026-08-01 06:34 - 장애물 생성, 충돌 판정, 점수 누적
+
+## difficulty-presets — 완료
+src/core/difficulty.ts 에 slow / normal / fast 프리셋을 정의했다.
+- DIFFICULTY_IDS = ['slow','normal','fast'] (as const), DifficultyId, getConfig(id: string).
+- DifficultyConfig = GameConfig & { tickMs; track } — 기존 GameConfig 의 track?/ticksPerPoint? 를
+  건드리지 않으려고 difficulty.ts 안에서만 좁혔다. types.ts 에 tickMs 를 필수로 넣으면 이전 task 의
+  tests/core/game.test.ts, obstacles.test.ts 의 CONFIG 가 타입 에러가 나는데 그건 금지 영역이다.
+- 점프 물리(jumpVelocity 1.6 / gravity 0.35 / 체공 10 tick, 그중 7 tick 은 장애물 높이 위)는 세 난이도가
+  공유한다. 조작 감각을 고정해야 스페이스 하나만 배운 심사자가 난이도를 그대로 오갈 수 있다.
+  난이도는 obstacleSpeed(0.7 / 1.0 / 1.4), minGap(30 / 26 / 24), maxGap(46 / 40 / 34),
+  tickMs(60 / 50 / 40), ticksPerPoint(6 / 5 / 4) 로만 올라간다.
+- getConfig('nope') 는 타입 가드로 걸러 "알 수 없는 난이도 'nope'. 사용 가능한 값: slow, normal, fast" 를 던진다.
+- tests/core/difficulty.test.ts (8) 추가 — npm run check 통과 (34 pass / 0 fail).
+  불변식은 프리셋 숫자를 다시 계산하지 않고 실제 step() 으로 점프 궤적을 재현해 잰다.
+  체공 거리는 장애물 폭(2)뿐 아니라 위험 구간(장애물 폭 + 공룡 폭 = 4)보다 크다: 4.9 / 7.0 / 9.8.
+  minGap 은 회피 가능 최소 간격((체공+1) x 속도 + 위험 구간 = 11.7 / 15.0 / 19.4)보다 크다.
+- minGap 미달 / 속도 순서 / 점프 높이 / 에러 메시지 4가지로 코드를 일부러 깨뜨려 테스트가 각각
+  잡아내는지 확인한 뒤 되돌렸다.
+
+메모: 난이도별 장애물 간 실제 간격은 slow 2.57초 / normal 1.30초 / fast 0.69초다. fast 는 체공 10 tick 에
+간격 17.1 tick 이라 사람에게 빡빡하지만 물리적으로는 여유가 있다. headless-sim 의 봇 임계 거리는
+속도에 비례시켜야 세 난이도가 모두 완주한다.
