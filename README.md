@@ -11,9 +11,7 @@
 
 ## Demo
 
-<!-- 데모 영상 -->
-
-_(여기에 데모 영상 추가)_
+https://github.com/user-attachments/assets/31c7d235-1e25-4e71-9ede-fd9cfd3adce9
 
 ## 설치
 
