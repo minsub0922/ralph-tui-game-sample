@@ -137,7 +137,7 @@ tasks:
     type: core
     depends_on:
       - pure-renderer
-    completed: false
+    completed: true
     description: |
       목표:
         실제로 npm start 로 플레이 가능한 상태를 만든다.
