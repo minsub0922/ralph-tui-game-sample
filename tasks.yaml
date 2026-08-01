@@ -1,16 +1,12 @@
 version: 1
 project: tui-dino-game
-
-# 위에서 아래로 의존성 순서. 한 번에 하나씩만 수행한다.
-# 각 task 는 20~40분 안에 끝나는 수직 슬라이스이며, 끝나면 npm run check 가 통과해야 한다.
-
 tasks:
   - id: core-loop-and-jump
     title: 게임 상태와 점프 물리 (순수 로직)
     type: core
     depends_on: []
     completed: true
-    description: |
+    description: >
       목표:
         src/core/ 에 터미널과 무관한 순수 게임 코어를 만든다.
         - src/core/types.ts: GameState, GameConfig, Input, GameStatus 타입 정의
@@ -33,12 +29,12 @@ tasks:
 
       검증 명령:
         npm run check
-
   - id: obstacles-and-scoring
     title: 장애물 생성, 충돌 판정, 점수 누적
     type: core
-    depends_on: [core-loop-and-jump]
-    completed: false
+    depends_on:
+      - core-loop-and-jump
+    completed: true
     description: |
       목표:
         src/core/game.ts 를 확장해 게임을 실제로 "끝나는" 게임으로 만든다.
@@ -61,11 +57,11 @@ tasks:
 
       검증 명령:
         npm run check
-
   - id: difficulty-presets
     title: 난이도 3단계 프리셋
     type: core
-    depends_on: [obstacles-and-scoring]
+    depends_on:
+      - obstacles-and-scoring
     completed: false
     description: |
       목표:
@@ -85,11 +81,11 @@ tasks:
 
       검증 명령:
         npm run check
-
   - id: headless-sim
     title: 헤드리스 시뮬레이션 (관찰 가능한 결과)
     type: core
-    depends_on: [difficulty-presets]
+    depends_on:
+      - difficulty-presets
     completed: false
     description: |
       목표:
@@ -111,13 +107,13 @@ tasks:
 
       검증 명령:
         npm run check && npm run sim; echo "exit=$?"
-
   - id: pure-renderer
     title: 순수 렌더러 (state -> 화면 문자열)
     type: core
-    depends_on: [headless-sim]
+    depends_on:
+      - headless-sim
     completed: false
-    description: |
+    description: >
       목표:
         src/ui/render.ts 에 renderFrame(state, viewport) -> string[] 순수 함수를 만든다.
         - 상단 HUD 한 줄: 난이도, 현재 점수, 최고 점수
@@ -136,11 +132,11 @@ tasks:
 
       검증 명령:
         npm run check
-
   - id: terminal-app
     title: 터미널 실행 (난이도 메뉴 + 게임 루프 + 안전한 종료)
     type: core
-    depends_on: [pure-renderer]
+    depends_on:
+      - pure-renderer
     completed: false
     description: |
       목표:
@@ -164,11 +160,11 @@ tasks:
       검증 명령:
         npm run check && npm start
         (수동 확인: 메뉴 -> 스페이스 점프 -> Q 종료 후 터미널 정상 복구)
-
   - id: gameover-restart-and-highscore
     title: 게임 오버 처리, R 재시작, 난이도별 최고 기록 저장
     type: core
-    depends_on: [terminal-app]
+    depends_on:
+      - terminal-app
     completed: false
     description: |
       목표:
@@ -192,11 +188,11 @@ tasks:
 
       검증 명령:
         npm run check && npm run sim; echo "exit=$?"
-
   - id: progressive-speed-ramp
     title: (stretch) 판이 진행될수록 속도 상승
     type: stretch
-    depends_on: [gameover-restart-and-highscore]
+    depends_on:
+      - gameover-restart-and-highscore
     completed: false
     description: |
       목표:
@@ -212,11 +208,11 @@ tasks:
 
       검증 명령:
         npm run check && npm run sim; echo "exit=$?"
-
   - id: replay-record-and-verify
     title: (stretch) 리플레이 기록 및 재생 검증
     type: stretch
-    depends_on: [progressive-speed-ramp]
+    depends_on:
+      - progressive-speed-ramp
     completed: false
     description: |
       목표:
